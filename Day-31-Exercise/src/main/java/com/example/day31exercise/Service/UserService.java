@@ -5,8 +5,7 @@ import com.example.day31exercise.Repository.*;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @AllArgsConstructor
 @Service
@@ -15,7 +14,7 @@ public class UserService {
     private final MerchantStockRepository merchantStockRepository;
     private final ProductRepository productRepository;
     private final CartRepository cartRepository;
-
+    private final HistoryRepository historyRepository;
     // READ
     public List<User> getUsers() {
 
@@ -111,7 +110,9 @@ public class UserService {
         oldMerchantStock.setStock(oldMerchantStock.getStock() - 1);
         merchantStockRepository.save(oldMerchantStock);
 
-//        users.get(userIndex).getHistory().add(productService.products.get(productIndex));
+        History history = new History();
+        history.setProduct_id(productRefId);
+        history.setUser_id(userRefId);
         return 1; // product bought successfully
 
     }
@@ -268,16 +269,6 @@ public class UserService {
         if (userRepository.getReferenceById(userRefId).getRole().equals("Admin")) {
             return -2; // user is an admin and should not be able to rate
         }
-//        // check if user bought this product or no
-//        boolean productPurchesed = false;
-//        for (Product p : users.get(userIndex).getHistory()) {
-//            if (p.getProductId().equals(productId)) {
-//                productPurchesed = true;
-//            }
-//        }
-//        if (!productPurchesed) {
-//            return -4;// user did not purchase this product
-//        }
 
         double totalOfRatings =   productRepository.getReferenceById(productRefId).getRatingCount() *   productRepository.getReferenceById(productRefId).getAverageRating();
         Product oldProduct = productRepository.getReferenceById(productRefId);
@@ -288,6 +279,47 @@ public class UserService {
         productRepository.save(oldProduct);
         return 1; // rating added successfully
 
+    }
+
+    // ========================= EXTRA METHOD 5 =========================\\
+
+    public List<Product> generateSimilarProducts(Integer userId) {
+        // Fetch all history records for the given user
+        List<History> userHistory = historyRepository.findAllById(Collections.singleton(userId));
+
+
+        // If user doesn't exist or has no history, return null
+        if (userHistory == null || userHistory.isEmpty()) {
+            return null;
+        }
+
+        // Count product categories in the user's history
+        Map<String, Integer> categoryCount = new HashMap<>();
+        for (History history : userHistory) {
+            Product product = productRepository.findById(history.getProduct_id()).orElse(null);
+            if (product != null) {
+                Integer categoryId = product.getCategory_id();
+                categoryCount.put(String.valueOf(categoryId), categoryCount.getOrDefault(categoryId, 0) + 1);
+            }
+        }
+
+        // Find the category with the highest purchases
+        Integer mostPurchasedCategory = null;
+        int maxCount = 0;
+        for (Map.Entry<String, Integer> entry : categoryCount.entrySet()) {
+            if (entry.getValue() > maxCount) {
+                maxCount = entry.getValue();
+                mostPurchasedCategory = Integer.valueOf(entry.getKey());
+            }
+        }
+
+        // Get all products from the most purchased category
+        List<Product> similarProducts = new ArrayList<>();
+        if (mostPurchasedCategory != null) {
+            similarProducts = productRepository.findAllById(Collections.singleton(mostPurchasedCategory));
+        }
+
+        return similarProducts; // Return the list of similar products
     }
 
 }

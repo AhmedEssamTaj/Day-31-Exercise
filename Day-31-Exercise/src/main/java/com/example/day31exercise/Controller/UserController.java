@@ -2,6 +2,7 @@ package com.example.day31exercise.Controller;
 
 import com.example.day31exercise.ApiResponse.ApiResponse;
 import com.example.day31exercise.Model.Merchant;
+import com.example.day31exercise.Model.Product;
 import com.example.day31exercise.Model.User;
 import com.example.day31exercise.Service.UserService;
 import jakarta.validation.Valid;
@@ -9,6 +10,9 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.Errors;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @AllArgsConstructor
 @RestController
@@ -163,5 +167,16 @@ public class UserController {
         return ResponseEntity.status(400).body(new ApiResponse("something went wrong!"));
 
     }
+
+    // ========================= EXTRA Endpoint 5 =========================\\
+    @GetMapping("/get-similar/{userId}")
+    public ResponseEntity generateSimilarProducts(@PathVariable Integer userId){
+        List<Product> similarProducts = userService.generateSimilarProducts(userId);
+        if (similarProducts == null) {
+            return ResponseEntity.status(400).body(new ApiResponse("history not found"));
+        }
+        return ResponseEntity.status(200).body(similarProducts);
+    }
+
 
 }
