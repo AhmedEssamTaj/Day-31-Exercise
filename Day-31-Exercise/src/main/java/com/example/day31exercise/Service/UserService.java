@@ -113,6 +113,7 @@ public class UserService {
         History history = new History();
         history.setProduct_id(productRefId);
         history.setUser_id(userRefId);
+        historyRepository.save(history);
         return 1; // product bought successfully
 
     }
@@ -284,42 +285,53 @@ public class UserService {
     // ========================= EXTRA METHOD 5 =========================\\
 
     public List<Product> generateSimilarProducts(Integer userId) {
-        // Fetch all history records for the given user
-        List<History> userHistory = historyRepository.findAllById(Collections.singleton(userId));
+
+        List<History> userHistory = historyRepository.findAll();
 
 
-        // If user doesn't exist or has no history, return null
-        if (userHistory == null || userHistory.isEmpty()) {
+        List<History> filteredHistory = new ArrayList<>();
+        for (History history : userHistory) {
+            if (history.getUser_id().equals(userId)) {
+                filteredHistory.add(history);
+            }
+        }
+
+
+        if (filteredHistory.isEmpty()) {
             return null;
         }
 
-        // Count product categories in the user's history
-        Map<String, Integer> categoryCount = new HashMap<>();
-        for (History history : userHistory) {
+
+        Map<Integer, Integer> categoryCount = new HashMap<>();
+        for (History history : filteredHistory) {
             Product product = productRepository.findById(history.getProduct_id()).orElse(null);
             if (product != null) {
                 Integer categoryId = product.getCategory_id();
-                categoryCount.put(String.valueOf(categoryId), categoryCount.getOrDefault(categoryId, 0) + 1);
+                categoryCount.put(categoryId, categoryCount.getOrDefault(categoryId, 0) + 1);
             }
         }
 
-        // Find the category with the highest purchases
+
         Integer mostPurchasedCategory = null;
         int maxCount = 0;
-        for (Map.Entry<String, Integer> entry : categoryCount.entrySet()) {
+        for (Map.Entry<Integer, Integer> entry : categoryCount.entrySet()) {
             if (entry.getValue() > maxCount) {
                 maxCount = entry.getValue();
-                mostPurchasedCategory = Integer.valueOf(entry.getKey());
+                mostPurchasedCategory = entry.getKey();
             }
         }
 
-        // Get all products from the most purchased category
+
         List<Product> similarProducts = new ArrayList<>();
         if (mostPurchasedCategory != null) {
-            similarProducts = productRepository.findAllById(Collections.singleton(mostPurchasedCategory));
+            for (Product product : productRepository.findAll()) {
+                if (product.getCategory_id().equals(mostPurchasedCategory)) {
+                    similarProducts.add(product);
+                }
+            }
         }
 
-        return similarProducts; // Return the list of similar products
+        return similarProducts;
     }
 
 }
